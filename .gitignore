@@ -1,0 +1,29 @@
+# Node modules
+node_modules/
+
+# Environment variables
+.env*
+
+config/service-account.json
+
+
+
+# IDE
+.idea/
+.vscode/
+
+# Logs
+*.log
+
+# Swap files
+*.swp
+*.swo
+*.swn
+
+# Temporary files
+*.tmp
+
+# OS generated files
+.DS_Store
+*.Identifier
+*.Zone.Identifier
