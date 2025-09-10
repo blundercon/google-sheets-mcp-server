@@ -1,52 +1,38 @@
+import { GoogleAuth } from 'google-auth-library';
+
 /**
  * Function to update values in a Google Sheets spreadsheet by data filter.
  *
  * @param {Object} args - Arguments for the update.
  * @param {string} args.spreadsheetId - The ID of the spreadsheet to operate on.
- * @param {string} args.range - The range of cells to update.
+ * @param {Object} args.data - The data to be updated.
  * @param {string} [args.valueInputOption='USER_ENTERED'] - Determines how input data should be interpreted.
  * @returns {Promise<Object>} - The result of the update operation.
  */
-const executeFunction = async ({ spreadsheetId, range, valueInputOption = 'USER_ENTERED' }) => {
+const execute = async ({ spreadsheetId, data, valueInputOption = 'USER_ENTERED' }) => {
   const baseUrl = 'https://sheets.googleapis.com';
-  const accessToken = ''; // will be provided by the user
-  const url = `${baseUrl}/v4/spreadsheets/${spreadsheetId}/values:batchUpdateByDataFilter`;
-
-  const headers = {
-    'Content-Type': 'application/json',
-    'Accept': 'application/json',
-    'Authorization': `Bearer ${accessToken}`
-  };
-
-  const body = JSON.stringify({
-    data: [
-      {
-        range: range,
-        values: [] // This should be populated with the actual values to update
-      }
-    ],
-    valueInputOption: valueInputOption
-  });
 
   try {
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: headers,
-      body: body
+    const auth = new GoogleAuth({
+      scopes: ['https://www.googleapis.com/auth/spreadsheets']
+    });
+    const client = await auth.getClient();
+
+    const body = JSON.stringify({
+      data,
+      valueInputOption
     });
 
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(JSON.stringify(errorData));
-    }
+    const response = await client.request({
+      url: `${baseUrl}/v4/spreadsheets/${spreadsheetId}/values:batchUpdateByDataFilter`,
+      method: 'POST',
+      body
+    });
 
-    const data = await response.json();
-    return data;
+    return response.data;
   } catch (error) {
     console.error('Error updating spreadsheet:', error);
-    return {
-      error: `An error occurred while updating the spreadsheet: ${error instanceof Error ? error.message : JSON.stringify(error)}`
-    };
+    throw error;
   }
 };
 
@@ -55,11 +41,11 @@ const executeFunction = async ({ spreadsheetId, range, valueInputOption = 'USER_
  * @type {Object}
  */
 const apiTool = {
-  function: executeFunction,
+  function: execute,
   definition: {
     type: 'function',
     function: {
-      name: 'update_spreadsheet_values',
+      name: 'update_spreadsheet_values_by_data_filter',
       description: 'Update values in a Google Sheets spreadsheet by data filter.',
       parameters: {
         type: 'object',
@@ -68,19 +54,19 @@ const apiTool = {
             type: 'string',
             description: 'The ID of the spreadsheet to operate on.'
           },
-          range: {
-            type: 'string',
-            description: 'The range of cells to update.'
+          data: {
+            type: 'object',
+            description: 'The data to be updated.'
           },
           valueInputOption: {
             type: 'string',
             description: 'Determines how input data should be interpreted.'
           }
         },
-        required: ['spreadsheetId', 'range']
+        required: ['spreadsheetId', 'data']
       }
     }
   }
 };
 
-export { apiTool };
+export { apiTool, execute };

@@ -1,3 +1,5 @@
+import { GoogleAuth } from 'google-auth-library';
+
 /**
  * Function to append values to a Google Sheets spreadsheet.
  *
@@ -12,45 +14,35 @@
  * @param {string} [args.responseDateTimeRenderOption] - How to render date/time values in the response.
  * @returns {Promise<Object>} - The result of the append operation.
  */
-const executeFunction = async ({ spreadsheetId, range, valueInputOption, values, insertDataOption, includeValuesInResponse, responseValueRenderOption, responseDateTimeRenderOption }) => {
+const execute = async ({ spreadsheetId, range, valueInputOption, values, insertDataOption, includeValuesInResponse, responseValueRenderOption, responseDateTimeRenderOption }) => {
   const baseUrl = 'https://sheets.googleapis.com';
-  const accessToken =  process.env.GOOGLE_API_WORKSPACE_API_KEY; // will be provided by the user
+  
   try {
-    // Construct the URL for the append request
-    const url = `${baseUrl}/v4/spreadsheets/${spreadsheetId}/values/${range}:append?valueInputOption=${valueInputOption}` +
-                (insertDataOption ? `&insertDataOption=${insertDataOption}` : '') +
-                (includeValuesInResponse ? `&includeValuesInResponse=${includeValuesInResponse}` : '') +
-                (responseValueRenderOption ? `&responseValueRenderOption=${responseValueRenderOption}` : '') +
-                (responseDateTimeRenderOption ? `&responseDateTimeRenderOption=${responseDateTimeRenderOption}` : '');
+    const auth = new GoogleAuth({
+      scopes: ['https://www.googleapis.com/auth/spreadsheets']
+    });
+    const client = await auth.getClient();
 
-    // Set up headers for the request
-    const headers = {
-      'Content-Type': 'application/json',
-      'Accept': 'application/json',
-      'Authorization': `Bearer ${accessToken}`
-    };
+    // Construct the URL for the append request
+    const url = new URL(`${baseUrl}/v4/spreadsheets/${spreadsheetId}/values/${range}:append`);
+    url.searchParams.append('valueInputOption', valueInputOption);
+    if (insertDataOption) url.searchParams.append('insertDataOption', insertDataOption);
+    if (includeValuesInResponse) url.searchParams.append('includeValuesInResponse', includeValuesInResponse);
+    if (responseValueRenderOption) url.search_params.append('responseValueRenderOption', responseValueRenderOption);
+    if (responseDateTimeRenderOption) url.search_params.append('responseDateTimeRenderOption', responseDateTimeRenderOption);
 
     // Perform the fetch request
-    const response = await fetch(url, {
+    const response = await client.request({
+      url: url.toString(),
       method: 'POST',
-      headers,
       body: JSON.stringify({ values })
     });
 
-    // Check if the response was successful
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(JSON.stringify(errorData));
-    }
-
     // Parse and return the response data
-    const data = await response.json();
-    return data;
+    return response.data;
   } catch (error) {
     console.error('Error appending values to spreadsheet:', error);
-    return {
-      error: `An error occurred while appending values: ${error instanceof Error ? error.message : JSON.stringify(error)}`
-    };
+    throw error;
   }
 };
 
@@ -59,7 +51,7 @@ const executeFunction = async ({ spreadsheetId, range, valueInputOption, values,
  * @type {Object}
  */
 const apiTool = {
-  function: executeFunction,
+  function: execute,
   definition: {
     type: 'function',
     function: {
@@ -113,4 +105,4 @@ const apiTool = {
   }
 };
 
-export { apiTool };
+export { apiTool, execute };

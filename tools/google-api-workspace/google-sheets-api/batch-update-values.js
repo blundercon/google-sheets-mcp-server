@@ -1,3 +1,5 @@
+import { GoogleAuth } from 'google-auth-library';
+
 /**
  * Function to batch update values in a Google Sheets spreadsheet.
  *
@@ -7,19 +9,14 @@
  * @param {string} [args.valueInputOption='USER_ENTERED'] - Determines how input data should be interpreted.
  * @returns {Promise<Object>} - The result of the batch update operation.
  */
-const executeFunction = async ({ spreadsheetId, valueRanges, valueInputOption = 'USER_ENTERED' }) => {
+const execute = async ({ spreadsheetId, valueRanges, valueInputOption = 'USER_ENTERED' }) => {
   const baseUrl = 'https://sheets.googleapis.com';
-  const accessToken = ''; // will be provided by the user
+  
   try {
-    // Construct the URL for the batch update
-    const url = `${baseUrl}/v4/spreadsheets/${spreadsheetId}/values:batchUpdate`;
-
-    // Set up headers for the request
-    const headers = {
-      'Content-Type': 'application/json',
-      'Accept': 'application/json',
-      'Authorization': `Bearer ${accessToken}`
-    };
+    const auth = new GoogleAuth({
+      scopes: ['https://www.googleapis.com/auth/spreadsheets']
+    });
+    const client = await auth.getClient();
 
     // Create the request body
     const body = JSON.stringify({
@@ -28,26 +25,17 @@ const executeFunction = async ({ spreadsheetId, valueRanges, valueInputOption = 
     });
 
     // Perform the fetch request
-    const response = await fetch(url, {
+    const response = await client.request({
+      url: `${baseUrl}/v4/spreadsheets/${spreadsheetId}/values:batchUpdate`,
       method: 'POST',
-      headers,
       body
     });
 
-    // Check if the response was successful
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(JSON.stringify(errorData));
-    }
-
     // Parse and return the response data
-    const data = await response.json();
-    return data;
+    return response.data;
   } catch (error) {
     console.error('Error batch updating values:', error);
-    return {
-      error: `An error occurred while batch updating values: ${error instanceof Error ? error.message : JSON.stringify(error)}`
-    };
+    throw error;
   }
 };
 
@@ -56,7 +44,7 @@ const executeFunction = async ({ spreadsheetId, valueRanges, valueInputOption = 
  * @type {Object}
  */
 const apiTool = {
-  function: executeFunction,
+  function: execute,
   definition: {
     type: 'function',
     function: {
@@ -105,4 +93,4 @@ const apiTool = {
   }
 };
 
-export { apiTool };
+export { apiTool, execute };

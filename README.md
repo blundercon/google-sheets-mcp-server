@@ -28,23 +28,39 @@ Run from your project's root directory:
 npm install
 ```
 
-### 🔐 Set tool environment variables
+### 🔐 Set up authentication
 
-In the `.env` file, you'll see environment variable placeholders, one for each workspace that the selected tools are from. For example, if you selected requests from 2 workspaces, e.g. Acme and Widgets, you'll see two placeholders:
+This project uses a Google Service Account for authentication.
 
+#### 1. Create Service Account
+```bash
+# Create service account
+gcloud iam service-accounts create sheets-mcp-server \
+    --display-name="Sheets MCP Server"
+
+# Grant Sheets API access
+gcloud projects add-iam-policy-binding PROJECT_ID \
+    --member="serviceAccount:sheets-mcp-server@PROJECT_ID.iam.gserviceaccount.com" \
+    --role="roles/editor"
+
+# Generate key file
+gcloud iam service-accounts keys create service-account.json \
+    --iam-account=sheets-mcp-server@PROJECT_ID.iam.gserviceaccount.com
 ```
-ACME_API_KEY=
-WIDGETS_API_KEY=
+
+#### 2. Configure Environment
+
+Set the `GOOGLE_APPLICATION_CREDENTIALS` environment variable to the path of the service account key file you downloaded.
+
+##### Option A: File Path (Recommended)
+```bash
+export GOOGLE_APPLICATION_CREDENTIALS="/path/to/service-account.json"
 ```
 
-Update the values with actual API keys for each API. These environment variables are used inside of the generated tools to set the API key for each request. You can inspect a file in the `tools` directory to see how it works.
-
-```javascript
-// environment variables are used inside of each tool file
-const apiKey = process.env.ACME_API_KEY;
+##### Option B: JSON String (For containers/CI)
+```bash
+export GOOGLE_APPLICATION_CREDENTIALS='{"type":"service_account","project_id":"your-project",...}'
 ```
-
-**Caveat:** This may not be correct for every API. The generation logic is relatively simple - for each workspace, we create an environment variable with the same name as the workspace slug, and then use that environment variable in each tool file that belongs to that workspace. If this isn't the right behavior for your chosen API, no problem! You can manually update anything in the `.env` file or tool files to accurately reflect the API's method of authentication.
 
 ## 🌐 Test the MCP Server with Postman
 

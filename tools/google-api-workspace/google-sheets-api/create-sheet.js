@@ -1,3 +1,5 @@
+import { GoogleAuth } from 'google-auth-library';
+
 /**
  * Function to create a new spreadsheet using the Google Sheets API.
  *
@@ -6,10 +8,8 @@
  * @param {Object} [args.properties] - Additional properties for the spreadsheet.
  * @returns {Promise<Object>} - The result of the spreadsheet creation.
  */
-const executeFunction = async ({ title, properties }) => {
+const execute = async ({ title, properties }) => {
   const baseUrl = 'https://sheets.googleapis.com';
-  const accessToken =  process.env.GOOGLE_API_WORKSPACE_API_KEY; // will be provided by the user
-  const url = `${baseUrl}/v4/spreadsheets?access_token=${accessToken}`;
   
   const requestBody = {
     properties: {
@@ -19,28 +19,21 @@ const executeFunction = async ({ title, properties }) => {
   };
 
   try {
-    const response = await fetch(url, {
+    const auth = new GoogleAuth({
+      scopes: ['https://www.googleapis.com/auth/spreadsheets']
+    });
+    const client = await auth.getClient();
+
+    const response = await client.request({
+      url: `${baseUrl}/v4/spreadsheets`,
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'Authorization': `Bearer ${accessToken}`
-      },
       body: JSON.stringify(requestBody)
     });
 
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(JSON.stringify(errorData));
-    }
-
-    const data = await response.json();
-    return data;
+    return response.data;
   } catch (error) {
     console.error('Error creating spreadsheet:', error);
-    return {
-      error: `An error occurred while creating the spreadsheet: ${error instanceof Error ? error.message : JSON.stringify(error)}`
-    };
+    throw error;
   }
 };
 
@@ -49,7 +42,7 @@ const executeFunction = async ({ title, properties }) => {
  * @type {Object}
  */
 const apiTool = {
-  function: executeFunction,
+  function: execute,
   definition: {
     type: 'function',
     function: {
@@ -73,4 +66,4 @@ const apiTool = {
   }
 };
 
-export { apiTool };
+export { apiTool, execute };

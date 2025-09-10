@@ -1,3 +1,5 @@
+import { GoogleAuth } from 'google-auth-library';
+
 /**
  * Function to get values from a Google Sheets spreadsheet.
  *
@@ -9,43 +11,32 @@
  * @param {string} [args.dateTimeRenderOption] - How to render dates and times.
  * @returns {Promise<Object>} - The result of the values retrieval.
  */
-const executeFunction = async ({ spreadsheetId, range, majorDimension, valueRenderOption, dateTimeRenderOption }) => {
+const execute = async ({ spreadsheetId, range, majorDimension, valueRenderOption, dateTimeRenderOption }) => {
   const baseUrl = 'https://sheets.googleapis.com';
-  const accessToken =  process.env.GOOGLE_API_WORKSPACE_API_KEY; // will be provided by the user
+  
   try {
+    const auth = new GoogleAuth({
+      scopes: ['https://www.googleapis.com/auth/spreadsheets']
+    });
+    const client = await auth.getClient();
+
     // Construct the URL with path and query parameters
     const url = new URL(`${baseUrl}/v4/spreadsheets/${spreadsheetId}/values/${range}`);
     if (majorDimension) url.searchParams.append('majorDimension', majorDimension);
     if (valueRenderOption) url.searchParams.append('valueRenderOption', valueRenderOption);
     if (dateTimeRenderOption) url.searchParams.append('dateTimeRenderOption', dateTimeRenderOption);
-    if (accessToken) url.searchParams.append('access_token', accessToken);
-
-    // Set up headers for the request
-    const headers = {
-      'Accept': 'application/json',
-      'Authorization': `Bearer ${accessToken}`
-    };
 
     // Perform the fetch request
-    const response = await fetch(url.toString(), {
-      method: 'GET',
-      headers
+    const response = await client.request({
+      url: url.toString(),
+      method: 'GET'
     });
 
-    // Check if the response was successful
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(JSON.stringify(errorData));
-    }
-
     // Parse and return the response data
-    const data = await response.json();
-    return data;
+    return response.data;
   } catch (error) {
     console.error('Error retrieving values from spreadsheet:', error);
-    return {
-      error: `An error occurred while retrieving values: ${error instanceof Error ? error.message : JSON.stringify(error)}`
-    };
+    throw error;
   }
 };
 
@@ -54,7 +45,7 @@ const executeFunction = async ({ spreadsheetId, range, majorDimension, valueRend
  * @type {Object}
  */
 const apiTool = {
-  function: executeFunction,
+  function: execute,
   definition: {
     type: 'function',
     function: {
@@ -90,4 +81,4 @@ const apiTool = {
   }
 };
 
-export { apiTool };
+export { apiTool, execute };

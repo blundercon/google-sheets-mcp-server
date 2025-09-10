@@ -1,3 +1,5 @@
+import { GoogleAuth } from 'google-auth-library';
+
 /**
  * Function to copy a sheet from one spreadsheet to another using the Google Sheets API.
  *
@@ -7,44 +9,31 @@
  * @param {string} args.destinationSpreadsheetId - The ID of the spreadsheet to copy the sheet to.
  * @returns {Promise<Object>} - The properties of the newly created sheet.
  */
-const executeFunction = async ({ spreadsheetId, sheetId, destinationSpreadsheetId }) => {
+const execute = async ({ spreadsheetId, sheetId, destinationSpreadsheetId }) => {
   const baseUrl = 'https://sheets.googleapis.com';
-  const accessToken = ''; // will be provided by the user
-  const url = `${baseUrl}/v4/spreadsheets/${spreadsheetId}/sheets/${sheetId}:copyTo`;
 
   const body = {
     destinationSpreadsheetId
   };
 
   try {
-    // Set up headers for the request
-    const headers = {
-      'Content-Type': 'application/json',
-      'Accept': 'application/json',
-      'Authorization': `Bearer ${accessToken}`
-    };
+    const auth = new GoogleAuth({
+      scopes: ['https://www.googleapis.com/auth/spreadsheets']
+    });
+    const client = await auth.getClient();
 
     // Perform the fetch request
-    const response = await fetch(url, {
+    const response = await client.request({
+      url: `${baseUrl}/v4/spreadsheets/${spreadsheetId}/sheets/${sheetId}:copyTo`,
       method: 'POST',
-      headers,
       body: JSON.stringify(body)
     });
 
-    // Check if the response was successful
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(JSON.stringify(errorData));
-    }
-
     // Parse and return the response data
-    const data = await response.json();
-    return data;
+    return response.data;
   } catch (error) {
     console.error('Error copying the sheet:', error);
-    return {
-      error: `An error occurred while copying the sheet: ${error instanceof Error ? error.message : JSON.stringify(error)}`
-    };
+    throw error;
   }
 };
 
@@ -53,7 +42,7 @@ const executeFunction = async ({ spreadsheetId, sheetId, destinationSpreadsheetI
  * @type {Object}
  */
 const apiTool = {
-  function: executeFunction,
+  function: execute,
   definition: {
     type: 'function',
     function: {
@@ -81,4 +70,4 @@ const apiTool = {
   }
 };
 
-export { apiTool };
+export { apiTool, execute };
